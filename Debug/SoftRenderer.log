@@ -1,0 +1,39 @@
+﻿Build started 2014-6-30 20:33:30.
+     1>Project "E:\Projects\SoftRenderer\SoftRenderer.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "Debug\SoftRenderer.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         All outputs are up-to-date.
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /IE:\Projects\SoftRenderer\\Shader\ /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"StdAfx.h" /Fp"Debug\SoftRenderer.pch" /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt Rasterizer.cpp
+         Rasterizer.cpp
+       ResourceCompile:
+         All outputs are up-to-date.
+       ManifestResourceCompile:
+         All outputs are up-to-date.
+       Link:
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\Projects\SoftRenderer\Debug\SoftRenderer.exe" /INCREMENTAL /NOLOGO /LIBPATH:E:\Projects\SoftRenderer\Debug\ PhongShader.lib winmm.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\SoftRenderer.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"E:\Projects\SoftRenderer\Debug\SoftRenderer.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\Projects\SoftRenderer\Debug\SoftRenderer.lib" /MACHINE:X86 Debug\SoftRenderer.res
+         Debug\SoftRenderer.exe.embed.manifest.res
+         Debug\Color.obj
+         Debug\matrix4x4.obj
+         Debug\vector2f.obj
+         Debug\vector3f.obj
+         Debug\vector4f.obj
+         Debug\AppMain.obj
+         Debug\Rasterizer.obj
+         Debug\SoftRenderer.obj
+         Debug\SoftRendererApp.obj
+         Debug\stdafx.obj
+       Manifest:
+         C:\Program Files\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /out:"Debug\SoftRenderer.exe.embed.manifest" /manifest Debug\SoftRenderer.exe.intermediate.manifest
+         All outputs are up-to-date.
+       LinkEmbedManifest:
+         All outputs are up-to-date.
+         SoftRenderer.vcxproj -> E:\Projects\SoftRenderer\Debug\SoftRenderer.exe
+       FinalizeBuildStatus:
+         Deleting file "Debug\SoftRenderer.unsuccessfulbuild".
+         Touching "Debug\SoftRenderer.lastbuildstate".
+     1>Done Building Project "E:\Projects\SoftRenderer\SoftRenderer.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.85
