@@ -41,6 +41,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <EnableManagedIncrementalBuild>true</EnableManagedIncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -87,7 +88,9 @@
     <ClInclude Include="Light.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="Math\common.h" />
+    <ClInclude Include="Math\matrix3x3.h" />
     <ClInclude Include="Math\matrix4x4.h" />
+    <ClInclude Include="Math\quaternion.h" />
     <ClInclude Include="Math\vector2f.h" />
     <ClInclude Include="Math\vector3f.h" />
     <ClInclude Include="Math\vector4f.h" />
@@ -101,7 +104,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Color.cpp" />
+    <ClCompile Include="Math\matrix3x3.cpp" />
     <ClCompile Include="Math\matrix4x4.cpp" />
+    <ClCompile Include="Math\quaternion.cpp" />
     <ClCompile Include="Math\vector2f.cpp" />
     <ClCompile Include="Math\vector3f.cpp" />
     <ClCompile Include="Math\vector4f.cpp" />

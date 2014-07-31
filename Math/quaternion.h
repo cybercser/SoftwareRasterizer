@@ -1,42 +1,63 @@
 #ifndef QUATERNION_H
 #define QUATERNION_H
 
+#include "common.h"
 #include <iostream>
-#include "vector4f.h"
+
+// Forward declaration
+class Vector3f;
+class Matrix3x3;
 
 class Quaternion
 {
 public:
-	float w;
-	float x;
-	float y;
-	float z;
+    float w;
+    float x;
+    float y;
+    float z;
+
+    static const Quaternion IDENTITY;
 
 public:
-	Quaternion();
-	Quaternion(const Quaternion& q);
-	Quaternion(const float fW, const float fX, const float fY, const float fZ);
-	Quaternion(const Vector4f& v);
-	// Quaternion(const float yaw, const float pitch, const float roll);
+    Quaternion();
+    Quaternion(const Quaternion& q);
+    Quaternion(float fW, float fX, float fY, float fZ);
+    Quaternion(const Vector3f& axis, float radian);
 
-	// assignment operators
-	inline Quaternion& operator = (const Quaternion& q);
-	inline Quaternion& operator += (const Quaternion& q);
-	inline Quaternion& operator -= (const Quaternion& q);
-	inline Quaternion& operator *= (const Quaternion& q);
-	inline Quaternion& operator *= (const float t);
-	inline Quaternion& operator /= (const float t);
+    /// Array accessor operator
+    float operator [] ( const size_t i ) const;
+    /// Array accessor operator
+    float& operator [] ( const size_t i );
 
-	// geometric methods
-	inline Quaternion Conjugate() const;
-	inline float Length() const;
-	inline float SquaredLength() const;
-	inline void Normalize();
-	inline Quaternion Inverse() const;
+    // Unary operators
+    Quaternion operator- () const;
+    Quaternion operator+ () const;
 
-	// TODO 
-	// to_matrix4x4
-	// 
+    // assignment operators
+    inline Quaternion& operator = (const Quaternion& q);
+    inline Quaternion& operator += (const Quaternion& q);
+    inline Quaternion& operator -= (const Quaternion& q);
+    inline Quaternion& operator *= (const Quaternion& q);
+    inline Quaternion& operator *= (float t);
+    inline Quaternion& operator /= (float t);
+
+    // Utilities
+    Quaternion Conjugate() const;
+    float Norm() const;
+    void Normalize();
+    Quaternion Inverse() const;
+    //     Quaternion Exp() const;
+    //     Quaternion Log() const;
+
+    void ToRotationMatrix(Matrix3x3& kRot) const;
+    void ToAxisAngle(Vector3f& rkAxis, float& rfAngle) const;
+
+    static Quaternion FromAxisAngle(float x, float y, float z, float angle);
+    static Quaternion FromAxisAngle(const Vector3f& axis, float radian);
+    static Quaternion FromRotationMatrix (const Matrix3x3& kRot);
+    static Quaternion Nlerp(const Quaternion & q1, const Quaternion & q2, float t);
+    static Quaternion Slerp(const Quaternion & q1, const Quaternion & q2, float t);
+    static Quaternion Squad(const Quaternion& q0, const Quaternion& a0, const Quaternion& a1, const Quaternion& q1, float t);
 };
 
 /************************************************************************/

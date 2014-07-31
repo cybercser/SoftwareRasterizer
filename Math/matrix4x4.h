@@ -1,8 +1,8 @@
 #ifndef MATRI4X4_H
 #define MATRI4X4_H
-
+#include "common.h"
 #include "vector4f.h"
-
+// Adapted from Ogre Matrix4
 // DirectX compatible matrix, row major
 class Matrix4x4
 {
@@ -32,9 +32,21 @@ public:
 	explicit Matrix4x4(float afMat[16]);
 	Matrix4x4(const Matrix4x4& mat);
 
-	// access grants
-	float& operator() (UINT row, UINT col);
-	float  operator() (UINT row, UINT col) const;
+	// access
+	inline float* operator [] ( size_t iRow )
+	{
+		assert( iRow < 4 );
+		return m[iRow];
+	}
+
+	inline const float* operator [] ( size_t iRow ) const
+	{
+		assert( iRow < 4 );
+		return m[iRow];
+	}
+
+	float& operator() (size_t row, size_t col);
+	float  operator() (size_t row, size_t col) const;
 
 	// assignment operators
 	Matrix4x4& operator =  (const Matrix4x4& rhs);
@@ -50,9 +62,10 @@ public:
 
 	void SetToIdentity();
 	// geometric methods
- 	//float Determinant() const;
- 	void Transpose();
-// 	void inverse();
+	Matrix4x4 Adjoint() const;
+ 	float Determinant() const;
+ 	Matrix4x4 Transpose();
+ 	Matrix4x4 Inverse();
 
 	// TODO
 	// to_quaternion

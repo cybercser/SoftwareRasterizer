@@ -5,6 +5,7 @@
 #define DTOR		0.017453 // convert degrees to radians, PI / 180
 #define RTOD		57.29578 // convert radians to degrees, 180 / PI
 #include <cmath>
+#include <cassert>
 
 #define ROUND(x) (int)((x)+0.5)
 

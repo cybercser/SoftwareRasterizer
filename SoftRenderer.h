@@ -49,7 +49,7 @@ public:
 	/************************************************************************/
 	Vertex* VB;	// vertex buffer
 	Vertex* TVB;	// temporary transformed vertex in post-projection space
-	UINT32*	IB;	// index buffer
+	UINT16*	IB;	// index buffer
 
 	// temp
 	size_t m_uVertexNum;
@@ -104,7 +104,7 @@ private:
 	/************************************************************************/
 	/* Transformation matrices                                              */
 	/************************************************************************/
-	Matrix4x4 m_model;	// modeling transformation	: object space	--> world space
+	Matrix4x4 m_world;	// world transformation	: object space	--> world space
 	Matrix4x4 m_view;	// viewing transformation	: world space	--> eye space
 	Matrix4x4 m_proj;	// projection transformation: eye space		--> clip space
 	Matrix4x4 m_port;	// viewport transformation  : clip space    --> screen space
@@ -118,6 +118,8 @@ private:
 	bool m_bCull;
 	bool m_bTexture;
 	bool m_bFog;
-	bool m_bDepthTest;
+	bool m_bZEnable;
 	bool m_bBlend;
+
+    bool m_bZWrite;
 };

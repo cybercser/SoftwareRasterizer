@@ -7,16 +7,15 @@
 #include "vector3f.h"
 
 
-const Matrix4x4 Matrix4x4::ZERO = Matrix4x4(0.0f, 0.0f, 0.0f, 0.0f,
-											0.0f, 0.0f, 0.0f, 0.0f,
-											0.0f, 0.0f, 0.0f, 0.0f,
-											0.0f, 0.0f, 0.0f, 0.0f);
+const Matrix4x4 Matrix4x4::ZERO(0.0f, 0.0f, 0.0f, 0.0f,
+								0.0f, 0.0f, 0.0f, 0.0f,
+								0.0f, 0.0f, 0.0f, 0.0f,
+								0.0f, 0.0f, 0.0f, 0.0f);
 
-const Matrix4x4 Matrix4x4::IDENTITY = Matrix4x4(1.0f, 0.0f, 0.0f, 0.0f,
-												0.0f, 1.0f, 0.0f, 0.0f,
-												0.0f, 0.0f, 1.0f, 0.0f,
-												0.0f, 0.0f, 0.0f, 1.0f);
-
+const Matrix4x4 Matrix4x4::IDENTITY(1.0f, 0.0f, 0.0f, 0.0f,
+									0.0f, 1.0f, 0.0f, 0.0f,
+									0.0f, 0.0f, 1.0f, 0.0f,
+									0.0f, 0.0f, 0.0f, 1.0f);
 
 Matrix4x4::Matrix4x4()
 {
@@ -46,13 +45,13 @@ Matrix4x4::Matrix4x4(const Matrix4x4& mat)
 	memcpy(m, mat.m, sizeof(float) * 16);
 }
 
-float& Matrix4x4::operator()(UINT row, UINT col)
+float& Matrix4x4::operator()(size_t row, size_t col)
 {
 	assert(row < 4 && col < 4);
 	return m[row][col];
 }
 
-float Matrix4x4::operator()(UINT row, UINT col) const
+float Matrix4x4::operator()(size_t row, size_t col) const
 {
 	assert(row < 4 && col < 4);
 	return m[row][col];
@@ -131,32 +130,116 @@ void Matrix4x4::SetToIdentity()
 	m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1.0f;
 }
 
-// float Matrix4x4::Determinant() const
-// {
-// 	// algebraic complement minor
-// 	float t1 =  _m[0]  * (_m[5]*_m[10]*_m[15] + _m[9]*_m[14]*_m[7] + _m[6]*_m[11]*_m[13] - _m[13]*_m[10]*_m[7] - _m[11]*_m[14]*_m[5] - _m[9]*_m[6]*_m[15]);
-// 	float t2 = -_m[4]  * (_m[1]*_m[10]*_m[15] + _m[9]*_m[14]*_m[3] + _m[2]*_m[11]*_m[13] - _m[13]*_m[10]*_m[3] - _m[11]*_m[14]*_m[1] - _m[9]*_m[2]*_m[15]);
-// 	float t3 =  _m[8]  * (_m[1]*_m[6]*_m[15]  + _m[5]*_m[14]*_m[3] + _m[2]*_m[7]*_m[13]  - _m[13]*_m[6]*_m[3]  - _m[1]*_m[7]*_m[14]  - _m[2]*_m[5]*_m[15]);
-// 	float t4 = -_m[12] * (_m[1]*_m[6]*_m[11]  + _m[2]*_m[7]*_m[9]  + _m[3]*_m[5]*_m[10]  - _m[3]*_m[6]*_m[9]   - _m[1]*_m[7]*_m[10]  - _m[2]*_m[5]*_m[11]);
-// 
-// 	return (t1 + t2 + t3 + t4);
-// }
-
-void Matrix4x4::Transpose()
+Matrix4x4 Matrix4x4::Transpose()
 {
-	std::swap(m[0][1], m[1][0]);
-	std::swap(m[0][2], m[2][0]);
-	std::swap(m[0][3], m[3][0]);
-	std::swap(m[1][2], m[2][1]);
-	std::swap(m[1][3], m[3][1]);
-	std::swap(m[2][3], m[3][2]);
+	return Matrix4x4(m[0][0], m[1][0], m[2][0], m[3][0],
+					m[0][1], m[1][1], m[2][1], m[3][1],
+					m[0][2], m[1][2], m[2][2], m[3][2],
+					m[0][3], m[1][3], m[2][3], m[3][3]);
 }
 
-// 
-// void Matrix4x4::inverse()
-// {
-// 
-// }
+// Óà×ÓÊ½
+inline static float MINOR(const Matrix4x4& m, const size_t r0, const size_t r1, const size_t r2, 
+	const size_t c0, const size_t c1, const size_t c2)
+{
+	return m[r0][c0] * (m[r1][c1] * m[r2][c2] - m[r2][c1] * m[r1][c2]) -
+		m[r0][c1] * (m[r1][c0] * m[r2][c2] - m[r2][c0] * m[r1][c2]) +
+		m[r0][c2] * (m[r1][c0] * m[r2][c1] - m[r2][c0] * m[r1][c1]);
+}
+
+float Matrix4x4::Determinant() const
+{
+	return m[0][0] * MINOR(*this, 1, 2, 3, 1, 2, 3) -
+		m[0][1] * MINOR(*this, 1, 2, 3, 0, 2, 3) +
+		m[0][2] * MINOR(*this, 1, 2, 3, 0, 1, 3) -
+		m[0][3] * MINOR(*this, 1, 2, 3, 0, 1, 2);
+}
+
+Matrix4x4 Matrix4x4::Adjoint() const
+{
+	return Matrix4x4( MINOR(*this, 1, 2, 3, 1, 2, 3),
+		-MINOR(*this, 0, 2, 3, 1, 2, 3),
+		MINOR(*this, 0, 1, 3, 1, 2, 3),
+		-MINOR(*this, 0, 1, 2, 1, 2, 3),
+
+		-MINOR(*this, 1, 2, 3, 0, 2, 3),
+		MINOR(*this, 0, 2, 3, 0, 2, 3),
+		-MINOR(*this, 0, 1, 3, 0, 2, 3),
+		MINOR(*this, 0, 1, 2, 0, 2, 3),
+
+		MINOR(*this, 1, 2, 3, 0, 1, 3),
+		-MINOR(*this, 0, 2, 3, 0, 1, 3),
+		MINOR(*this, 0, 1, 3, 0, 1, 3),
+		-MINOR(*this, 0, 1, 2, 0, 1, 3),
+
+		-MINOR(*this, 1, 2, 3, 0, 1, 2),
+		MINOR(*this, 0, 2, 3, 0, 1, 2),
+		-MINOR(*this, 0, 1, 3, 0, 1, 2),
+		MINOR(*this, 0, 1, 2, 0, 1, 2));
+}
+
+ 
+Matrix4x4 Matrix4x4::Inverse()
+{
+	float m00 = m[0][0], m01 = m[0][1], m02 = m[0][2], m03 = m[0][3];
+	float m10 = m[1][0], m11 = m[1][1], m12 = m[1][2], m13 = m[1][3];
+	float m20 = m[2][0], m21 = m[2][1], m22 = m[2][2], m23 = m[2][3];
+	float m30 = m[3][0], m31 = m[3][1], m32 = m[3][2], m33 = m[3][3];
+
+	float v0 = m20 * m31 - m21 * m30;
+	float v1 = m20 * m32 - m22 * m30;
+	float v2 = m20 * m33 - m23 * m30;
+	float v3 = m21 * m32 - m22 * m31;
+	float v4 = m21 * m33 - m23 * m31;
+	float v5 = m22 * m33 - m23 * m32;
+
+	float t00 = + (v5 * m11 - v4 * m12 + v3 * m13);
+	float t10 = - (v5 * m10 - v2 * m12 + v1 * m13);
+	float t20 = + (v4 * m10 - v2 * m11 + v0 * m13);
+	float t30 = - (v3 * m10 - v1 * m11 + v0 * m12);
+
+	float invDet = 1 / (t00 * m00 + t10 * m01 + t20 * m02 + t30 * m03);
+
+	float d00 = t00 * invDet;
+	float d10 = t10 * invDet;
+	float d20 = t20 * invDet;
+	float d30 = t30 * invDet;
+
+	float d01 = - (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+	float d11 = + (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+	float d21 = - (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
+	float d31 = + (v3 * m00 - v1 * m01 + v0 * m02) * invDet;
+
+	v0 = m10 * m31 - m11 * m30;
+	v1 = m10 * m32 - m12 * m30;
+	v2 = m10 * m33 - m13 * m30;
+	v3 = m11 * m32 - m12 * m31;
+	v4 = m11 * m33 - m13 * m31;
+	v5 = m12 * m33 - m13 * m32;
+
+	float d02 = + (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+	float d12 = - (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+	float d22 = + (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
+	float d32 = - (v3 * m00 - v1 * m01 + v0 * m02) * invDet;
+
+	v0 = m21 * m10 - m20 * m11;
+	v1 = m22 * m10 - m20 * m12;
+	v2 = m23 * m10 - m20 * m13;
+	v3 = m22 * m11 - m21 * m12;
+	v4 = m23 * m11 - m21 * m13;
+	v5 = m23 * m12 - m22 * m13;
+
+	float d03 = - (v5 * m01 - v4 * m02 + v3 * m03) * invDet;
+	float d13 = + (v5 * m00 - v2 * m02 + v1 * m03) * invDet;
+	float d23 = - (v4 * m00 - v2 * m01 + v0 * m03) * invDet;
+	float d33 = + (v3 * m00 - v1 * m01 + v0 * m02) * invDet;
+
+	return Matrix4x4(
+		d00, d01, d02, d03,
+		d10, d11, d12, d13,
+		d20, d21, d22, d23,
+		d30, d31, d32, d33);
+}
 
 //----------------------------------------------------------------------------------------
 Matrix4x4 operator+(const Matrix4x4& lhs, const Matrix4x4& rhs)
@@ -390,7 +473,7 @@ bool operator==(const Matrix4x4& lhs, const Matrix4x4& rhs)
 {
 	for (int i = 0; i < 4; ++i)
 		for ( int j = 0; j < 4; ++j )
-			if ( !FloatEqual(lhs.m[i][j], rhs.m[i][j]) )
+			if ( lhs.m[i][j] != rhs.m[i][j] )
 				return false;
 
 	return true;

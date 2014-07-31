@@ -28,6 +28,117 @@ TriType Rasterizer::GetTriType(Vertex* p0, Vertex* p1, Vertex* p2)
 	return type;
 }
 
+/* case 0 平顶三角形
+*
+*  p0      p1
+* 
+*      p2
+*/
+void Rasterizer::RasterizeTopTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF** cb, float** zb, FillMode fm, ShadeMode sm)
+{
+    float xs, xe;   // 端点 start end
+    float dxy_left, dxy_right;  // 左右边斜率的倒数
+
+    xs = p0->v.x;
+    xe = p1->v.x;
+    float deltaY = 1 / (p2->v.y - p0->v.y);
+
+    dxy_left = deltaY * (p2->v.x - p0->v.x);
+    dxy_right = deltaY * (p2->v.x - p1->v.x); 
+    float t = 0;
+
+    // 绘制每条扫描线
+    for (int y = ROUND(p0->v.y); y <= ROUND(p2->v.y); ++y)
+    {
+        t = (y - p0->v.y) * deltaY;
+        Color cxs = LERP(p0->c, p2->c, t);//deltaY * (p0->c * (p2->v.y - y) + p2->c * (y - p0->v.y));
+        cxs.Clamp();
+        cxs *= 255; 
+
+        Color cxe = LERP(p1->c, p2->c, t);//deltaY * (p1->c * (p2->v.y - y) + p2->c * (y - p1->v.y));
+        cxe.Clamp();
+        cxe *= 255; 
+
+        Color deltac(0, 0, 0);
+        if (!FloatEqual(xs, xe))
+            deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+        Color cxi = cxs;
+
+        float zxs = LERPf(p0->v.z, p2->v.z, t);
+        float zxe = LERPf(p1->v.z, p2->v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
+
+        if ( fm == FILL_SOLID )
+        {
+            if ( sm == SHADE_FLAT )
+            {
+                for (int x = ROUND(xs); x <= ROUND(xe); ++x)
+                {
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
+                }
+            }
+            else if ( sm == SHADE_GOURAUD )
+            {
+                for (int x = ROUND(xs); x <= ROUND(xe); ++x)
+                {
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                            zb[x][y] = zxi;
+                        }
+                        zxi += deltaz;
+                    } 
+                    else
+                    {
+                        cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                    }					
+                    cxi += deltac;
+                }
+            }
+        }
+        else if (fm == FILL_WIREFRAME)
+        {
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
+        }
+
+        xs += dxy_left;
+        xe += dxy_right;
+    }
+}
 
 /* case 1 平底三角形
 *
@@ -59,10 +170,17 @@ void Rasterizer::RasterizeBottomTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF
 		cxe.Clamp();
 		cxe *= 255; 
 
-		Color deltai(0, 0, 0);
+		Color deltac(0, 0, 0);
 		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+			deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
 		Color cxi = cxs;
+
+        float zxs = LERPf(p0->v.z, p2->v.z, t);
+        float zxe = LERPf(p0->v.z, p1->v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
 
 		if ( fm == FILL_SOLID )
 		{
@@ -70,87 +188,62 @@ void Rasterizer::RasterizeBottomTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
 				}
 			}
 			else if ( sm == SHADE_GOURAUD ) // Gouraud shading, interpolation
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                            zb[x][y] = zxi;
+                        }
+                        zxi += deltaz;
+                    } 
+                    else
+                    {
+                        cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                    }					
+                    cxi += deltac;
 				}
 			}
 		}
 		else if (fm == FILL_WIREFRAME)
 		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
-		}
-
-		xs += dxy_left;
-		xe += dxy_right;
-	}
-}
-
-/* case 0 平顶三角形
-*
-*  p0      p1
-* 
-*      p2
-*/
-void Rasterizer::RasterizeTopTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF** cb, float** zb, FillMode fm, ShadeMode sm)
-{
-	float xs, xe;   // 端点 start end
-	float dxy_left, dxy_right;  // 左右边斜率的倒数
-
-	xs = p0->v.x;
-	xe = p1->v.x;
-	float deltaY = 1 / (p2->v.y - p0->v.y);
-
-	dxy_left = deltaY * (p2->v.x - p0->v.x);
-	dxy_right = deltaY * (p2->v.x - p1->v.x); 
-	float t = 0;
-
-	// 绘制每条扫描线
-	for (int y = ROUND(p0->v.y); y <= ROUND(p2->v.y); ++y)
-	{
-		t = (y - p0->v.y) * deltaY;
-		Color cxs = LERP(p0->c, p2->c, t);//deltaY * (p0->c * (p2->v.y - y) + p2->c * (y - p0->v.y));
-		cxs.Clamp();
-		cxs *= 255; 
-
-		Color cxe = LERP(p1->c, p2->c, t);//deltaY * (p1->c * (p2->v.y - y) + p2->c * (y - p1->v.y));
-		cxe.Clamp();
-		cxe *= 255; 
-
-		Color deltai(0, 0, 0);
-		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
-		Color cxi = cxs;
-
-		if ( fm == FILL_SOLID )
-		{
-			if ( sm == SHADE_FLAT )
-			{
-				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
-				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
-				}
-			}
-			else if ( sm == SHADE_GOURAUD )
-			{
-				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
-				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
-				}
-			}
-		}
-		else if (fm == FILL_WIREFRAME)
-		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
 		}
 
 		xs += dxy_left;
@@ -188,8 +281,9 @@ void Rasterizer::RasterizeLeftTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF**
 	p.v.y = p1->v.y;
 	T = (p.v.y - p0->v.y) / p0p2.y;
 	p.v.x = p0->v.x + T * p0p2.x;
-	p.c = deltaYp0p2 * (p0->c * (p2->v.y - p.v.y) + p2->c * (p.v.y - p0->v.y));
-
+	//p.c = deltaYp0p2 * (p0->c * (p2->v.y - p.v.y) + p2->c * (p.v.y - p0->v.y));
+    p.c = LERP(p0->c, p2->c, T * deltaYp0p2);
+    p.v.z = LERPf(p0->v.z, p2->v.z,  T);
 	// 按平底三角形处理 p0p1p
 	xs = xe = p0->v.x;
 	// 绘制每条扫描线
@@ -204,10 +298,17 @@ void Rasterizer::RasterizeLeftTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF**
 		cxe.Clamp();
 		cxe *= 255; 
 
-		Color deltai(0, 0, 0);
+		Color deltac(0, 0, 0);
 		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+			deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
 		Color cxi = cxs;
+
+        float zxs = LERPf(p0->v.z, p.v.z, t);
+        float zxe = LERPf(p0->v.z, p1->v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
 
 		if ( fm == FILL_SOLID )
 		{
@@ -215,22 +316,62 @@ void Rasterizer::RasterizeLeftTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF**
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
 				}
 			}
 			else if ( sm == SHADE_GOURAUD )
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                            zb[x][y] = zxi;
+                        }
+                        zxi += deltaz;
+                    } 
+                    else
+                    {
+                        cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                    }					
+                    cxi += deltac;
 				}
 			}
 		}
 		else if (fm == FILL_WIREFRAME)
 		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
 		}
 
 		xs += dxy_left;
@@ -254,10 +395,17 @@ void Rasterizer::RasterizeLeftTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF**
 		cxe.Clamp();
 		cxe *= 255; 
 
-		Color deltai(0, 0, 0);
+		Color deltac(0, 0, 0);
 		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+			deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
 		Color cxi = cxs;
+
+        float zxs = LERPf(p.v.z, p2->v.z, t);
+        float zxe = LERPf(p1->v.z, p2->v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
 
 		if ( fm == FILL_SOLID )
 		{
@@ -265,22 +413,62 @@ void Rasterizer::RasterizeLeftTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF**
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
 				}
 			}
 			else if ( sm == SHADE_GOURAUD )
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                            zb[x][y] = zxi;
+                        }
+                        zxi += deltaz;
+                    } 
+                    else
+                    {
+                        cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                    }					
+                    cxi += deltac;
 				}
 			}
 		}
 		else if (fm == FILL_WIREFRAME)
 		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
 		}
 
 		xs += dxy_left;
@@ -319,8 +507,9 @@ void Rasterizer::RasterizeRightTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF*
 	p.v.y = p2->v.y;
 	T = (p.v.y - p0->v.y) / p0p1.y;
 	p.v.x = p0->v.x + T * p0p1.x;
-	p.c = deltaYp0p1 * (p0->c * (p1->v.y - p.v.y) + p1->c * (p.v.y - p0->v.y));
-
+	//p.c = deltaYp0p1 * (p0->c * (p1->v.y - p.v.y) + p1->c * (p.v.y - p0->v.y));
+    p.c = LERP(p0->c, p1->c, T * deltaYp0p1);
+    p.v.z = LERPf(p0->v.z, p1->v.z,  T);
 	// 按平底三角形处理 p0pp2
 	xs = xe = p0->v.x;
 	// 绘制每条扫描线
@@ -335,10 +524,17 @@ void Rasterizer::RasterizeRightTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF*
 		cxe.Clamp();
 		cxe *= 255; 
 
-		Color deltai(0, 0, 0);
+		Color deltac(0, 0, 0);
 		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+			deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
 		Color cxi = cxs;
+
+        float zxs = LERPf(p0->v.z, p2->v.z, t);
+        float zxe = LERPf(p0->v.z, p.v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
 
 		if ( fm == FILL_SOLID )
 		{
@@ -346,23 +542,63 @@ void Rasterizer::RasterizeRightTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF*
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
 				}
 			}
 			else if ( sm == SHADE_GOURAUD )
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                            zb[x][y] = zxi;
+                        }
+                        zxi += deltaz;
+                    } 
+                    else
+                    {
+                        cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                    }					
+                    cxi += deltac;
 				}
 			}
 
 		}
 		else if (fm == FILL_WIREFRAME)
 		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
 		}
 
 		xs += dxy_left;
@@ -381,14 +617,21 @@ void Rasterizer::RasterizeRightTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF*
 		cxs.Clamp();
 		cxs *= 255; 
 
-		Color cxe = LERP(p1->c, p.c, t);//deltaYp1p2 * (p1->c * (y - p.v.y) + p.c * (p1->v.y - y));
+		Color cxe = LERP(p.c, p1->c, t);//deltaYp1p2 * (p1->c * (y - p.v.y) + p.c * (p1->v.y - y));
 		cxe.Clamp();
 		cxe *= 255; 
 
-		Color deltai(0, 0, 0);
+		Color deltac(0, 0, 0);
 		if (!FloatEqual(xs, xe))
-			deltai = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
+			deltac = (cxe - cxs) / (xe - xs); // 颜色沿扫描线的变化率
 		Color cxi = cxs;
+
+        float zxs = LERPf(p2->v.z, p1->v.z, t);
+        float zxe = LERPf(p.v.z, p1->v.z, t);
+        float deltaz = 0;
+        if (!FloatEqual(xs, xe))
+            deltaz = (zxe - zxs) / (xe - xs); // 深度沿扫描线的变化率
+        float zxi = zxs;
 
 		if ( fm == FILL_SOLID )
 		{
@@ -396,22 +639,65 @@ void Rasterizer::RasterizeRightTri(Vertex* p0, Vertex* p1, Vertex* p2, COLORREF*
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    if ( zb != nullptr ) // zbuffer消隐
+                    {
+                        if ( zxi < zb[x][y] )
+                        {
+                            cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                            zb[x][y] = zxi;
+                        }      
+                        zxi += deltaz;
+                    }
+                    else
+                    {
+                        cb[x][y] = RGB(p0->c.r * 255, p0->c.g * 255, p0->c.b * 255);
+                    }
 				}
 			}
 			else if ( sm == SHADE_GOURAUD )
 			{
 				for (int x = ROUND(xs); x <= ROUND(xe); ++x)
 				{
-					cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
-					cxi += deltai;
+                    for (int x = ROUND(xs); x <= ROUND(xe); ++x)
+                    {
+                        if ( zb != nullptr ) // zbuffer消隐
+                        {
+                            if ( zxi < zb[x][y] )
+                            {
+                                cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                                zb[x][y] = zxi;
+                            }
+                            zxi += deltaz;
+                        } 
+                        else
+                        {
+                            cb[x][y] = RGB(cxi.r, cxi.g, cxi.b);
+                        }					
+                        cxi += deltac;
+                    }
 				}
 			}
 		}
 		else if (fm == FILL_WIREFRAME)
 		{
-			cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
-			cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            if ( zb != nullptr ) // zbuffer消隐
+            {
+                if ( zxs < zb[ROUND(xs)][y] )
+                {
+                    cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                    zb[ROUND(xs)][y] = zxs;
+                }
+                if ( zxe < zb[ROUND(xe)][y] )
+                {
+                    cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+                    zb[ROUND(xe)][y] = zxe;
+                }
+            } 
+            else
+            {
+                cb[ROUND(xs)][y] = RGB(cxs.r, cxs.g, cxs.b);
+                cb[ROUND(xe)][y] = RGB(cxe.r, cxe.g, cxe.b);
+            }
 		}
 
 		xs += dxy_left;

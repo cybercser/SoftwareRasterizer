@@ -209,10 +209,10 @@ Vector3f CrossProduct(const Vector3f& v1, const Vector3f& v2)
 	return ret;
 }
 
-const Vector3f Vector3f::ZERO				= Vector3f( 0.0f,  0.0f,  0.0f);
-const Vector3f Vector3f::UNIT_X				= Vector3f( 1.0f,  0.0f,  0.0f);
-const Vector3f Vector3f::UNIT_Y				= Vector3f( 0.0f,  1.0f,  0.0f);
-const Vector3f Vector3f::UNIT_Z				= Vector3f( 0.0f,  0.0f,  1.0f);
-const Vector3f Vector3f::NEGATIVE_UNIT_X	= Vector3f(-1.0f,  0.0f,  0.0f);
-const Vector3f Vector3f::NEGATIVE_UNIT_Y	= Vector3f( 0.0f, -1.0f,  0.0f);
-const Vector3f Vector3f::NEGATIVE_UNIT_Z	= Vector3f( 0.0f,  0.0f, -1.0f);
+const Vector3f Vector3f::ZERO(0.0f,  0.0f,  0.0f);
+const Vector3f Vector3f::UNIT_X(1.0f,  0.0f,  0.0f);
+const Vector3f Vector3f::UNIT_Y(0.0f,  1.0f,  0.0f);
+const Vector3f Vector3f::UNIT_Z(0.0f,  0.0f,  1.0f);
+const Vector3f Vector3f::NEGATIVE_UNIT_X(-1.0f,  0.0f,  0.0f);
+const Vector3f Vector3f::NEGATIVE_UNIT_Y(0.0f, -1.0f,  0.0f);
+const Vector3f Vector3f::NEGATIVE_UNIT_Z(0.0f,  0.0f, -1.0f);

@@ -16,13 +16,15 @@ SoftRenderer::SoftRenderer(void) :
 	m_pRas(new Rasterizer()),
 	m_Ka(0.125f),
 	m_pM(new Material()),
-	m_uVertexNum(3),
-	m_uPrimtiveNum(1),
+	m_uVertexNum(24),
+	m_uPrimtiveNum(12),
 	m_fXAngle(0.0f),
 	m_fYAngle(0.0f),
 	m_eFillMode(FillMode::FILL_SOLID),
 	m_eShadeMode(ShadeMode::SHADE_GOURAUD),
-	m_bLighting(true)
+	m_bLighting(false),
+    m_bZEnable(true),
+    m_bZWrite(true)
 {
 }
 
@@ -74,18 +76,52 @@ void SoftRenderer::Initialize()
 		BCB[i] = new COLORREF[WINDOW_HEIGHT];
 		BZB[i] = new float[WINDOW_HEIGHT];
 	}
+
+    SetupLights();
 }
 
 void SoftRenderer::CreateVertexBuffer()
 {
-	// A simple triangle	
+	// A simple triangle
+    // A simple cube
+    m_uVertexNum = 24;
 	VB = new Vertex[m_uVertexNum];
 	TVB = new Vertex[m_uVertexNum];
 
-	VB[0].v = Vector4f(-1.0f, -1.0f, 0.0f); TVB[0].c = VB[0].c = Color(1.f, 0.f, 0.f, 1.f); VB[0].n = Vector3f(0.0f, 0.0f, 1.0f);
-	VB[1].v = Vector4f(1.0f, -1.0f, 0.0f); TVB[1].c = VB[1].c = Color(0.f, 0.f, 1.f, 1.f); VB[1].n = Vector3f(0.0f, 0.0f, 1.0f);
-	VB[2].v = Vector4f(0.0f, 1.0f, 0.0f); TVB[2].c = VB[2].c = Color(1.f, 1.f, 1.f, 1.f); VB[2].n = Vector3f(0.0f, 0.0f, 1.0f);
+// 	VB[0].v = Vector4f(-1.0f, -1.0f, 0.0f); TVB[0].c = VB[0].c = Color(1.f, 0.f, 0.f, 1.f); VB[0].n = Vector3f(0.0f, 0.0f, 1.0f);
+// 	VB[1].v = Vector4f(1.0f, -1.0f, 0.0f); TVB[1].c = VB[1].c = Color(0.f, 0.f, 1.f, 1.f); VB[1].n = Vector3f(0.0f, 0.0f, 1.0f);
+// 	VB[2].v = Vector4f(0.0f, 1.0f, 0.0f); TVB[2].c = VB[2].c = Color(1.f, 1.f, 1.f, 1.f); VB[2].n = Vector3f(0.0f, 0.0f, 1.0f);
 	//VB[3].v = Vector4f(0.0f, -3.0f, 0.0f); TVB[3].c = VB[3].c = Color(1.f, 0.f, 1.f, 1.f); VB[3].n = Vector3f(0.0f, 0.0f, 1.0f);
+
+    // front and back
+    VB[0].v =  Vector4f(-1.0f, -1.0f, -1.0f); TVB[0].c = VB[0].c = Color(1.f, 0.f, 0.f, 1.f); VB[0].n = Vector3f( 0.0f, 0.0f, -1.0f);
+    VB[1].v =  Vector4f(-1.0f,  1.0f, -1.0f); TVB[1].c = VB[1].c = Color(0.f, 0.f, 1.f, 1.f); VB[1].n = Vector3f( 0.0f, 0.0f, -1.0f);
+    VB[2].v =  Vector4f( 1.0f,  1.0f, -1.0f); TVB[2].c = VB[2].c = Color(1.f, 1.f, 1.f, 1.f); VB[2].n = Vector3f( 0.0f, 0.0f, -1.0f);
+    VB[3].v =  Vector4f( 1.0f, -1.0f, -1.0f); TVB[3].c = VB[3].c = Color(1.f, 0.f, 1.f, 1.f); VB[3].n = Vector3f( 0.0f, 0.0f, -1.0f);
+    VB[4].v =  Vector4f(-1.0f, -1.0f,  1.0f); TVB[4].c = VB[4].c = Color(1.f, 1.f, 0.f, 1.f); VB[4].n = Vector3f( 0.0f, 0.0f,  1.0f);
+    VB[5].v =  Vector4f(-1.0f,  1.0f,  1.0f); TVB[5].c = VB[5].c = Color(0.f, 0.f, 0.f, 1.f); VB[5].n = Vector3f( 0.0f, 0.0f,  1.0f);
+    VB[6].v =  Vector4f( 1.0f,  1.0f,  1.0f); TVB[6].c = VB[6].c = Color(0.f, 1.f, 0.f, 1.f); VB[6].n = Vector3f( 0.0f, 0.0f,  1.0f);
+    VB[7].v =  Vector4f( 1.0f, -1.0f,  1.0f); TVB[7].c = VB[7].c = Color(1.f, 0.f, 1.f, 1.f); VB[7].n = Vector3f( 0.0f, 0.0f,  1.0f);
+
+    // left and right
+    VB[8].v  = Vector4f(-1.0f, -1.0f,  1.0f); TVB[8].c  = VB[8].c  = Color(1.f, 0.f, 0.f, 1.f); VB[8].n  = Vector3f(-1.0f, 0.0f,  0.0f);
+    VB[9].v  = Vector4f(-1.0f,  1.0f,  1.0f); TVB[9].c  = VB[9].c  = Color(0.f, 0.f, 1.f, 1.f); VB[9].n  = Vector3f(-1.0f, 0.0f,  0.0f);
+    VB[10].v = Vector4f(-1.0f,  1.0f, -1.0f); TVB[10].c = VB[10].c = Color(1.f, 1.f, 1.f, 1.f); VB[10].n = Vector3f(-1.0f, 0.0f,  0.0f);
+    VB[11].v = Vector4f(-1.0f, -1.0f, -1.0f); TVB[11].c = VB[11].c = Color(1.f, 0.f, 1.f, 1.f); VB[11].n = Vector3f(-1.0f, 0.0f,  0.0f);
+    VB[12].v = Vector4f( 1.0f, -1.0f, -1.0f); TVB[12].c = VB[12].c = Color(1.f, 1.f, 0.f, 1.f); VB[12].n = Vector3f( 1.0f, 0.0f,  0.0f);
+    VB[13].v = Vector4f( 1.0f,  1.0f, -1.0f); TVB[13].c = VB[13].c = Color(0.f, 0.f, 0.f, 1.f); VB[13].n = Vector3f( 1.0f, 0.0f,  0.0f);
+    VB[14].v = Vector4f( 1.0f,  1.0f,  1.0f); TVB[14].c = VB[14].c = Color(0.f, 1.f, 0.f, 1.f); VB[14].n = Vector3f( 1.0f, 0.0f,  0.0f);
+    VB[15].v = Vector4f( 1.0f, -1.0f,  1.0f); TVB[15].c = VB[15].c = Color(1.f, 0.f, 1.f, 1.f); VB[15].n = Vector3f( 1.0f, 0.0f,  0.0f);
+
+    // top and bottom
+    VB[16].v = Vector4f(-1.0f,  1.0f, -1.0f); TVB[16].c = VB[16].c = Color(1.f, 0.f, 0.f, 1.f); VB[16].n = Vector3f( 0.0f, 1.0f,  0.0f);
+    VB[17].v = Vector4f(-1.0f,  1.0f,  1.0f); TVB[17].c = VB[17].c = Color(0.f, 0.f, 1.f, 1.f); VB[17].n = Vector3f( 0.0f, 1.0f,  0.0f);
+    VB[18].v = Vector4f( 1.0f,  1.0f,  1.0f); TVB[18].c = VB[18].c = Color(1.f, 1.f, 1.f, 1.f); VB[18].n = Vector3f( 0.0f, 1.0f,  0.0f);
+    VB[19].v = Vector4f( 1.0f,  1.0f, -1.0f); TVB[19].c = VB[19].c = Color(1.f, 0.f, 1.f, 1.f); VB[19].n = Vector3f( 0.0f, 1.0f,  0.0f);
+    VB[20].v = Vector4f(-1.0f, -1.0f, -1.0f); TVB[20].c = VB[20].c = Color(1.f, 1.f, 0.f, 1.f); VB[20].n = Vector3f( 0.0f,-1.0f,  0.0f);
+    VB[21].v = Vector4f( 1.0f, -1.0f,  1.0f); TVB[21].c = VB[21].c = Color(0.f, 0.f, 0.f, 1.f); VB[21].n = Vector3f( 0.0f,-1.0f,  0.0f);
+    VB[22].v = Vector4f(-1.0f, -1.0f,  1.0f); TVB[22].c = VB[22].c = Color(0.f, 1.f, 0.f, 1.f); VB[22].n = Vector3f( 0.0f,-1.0f,  0.0f);
+    VB[23].v = Vector4f( 1.0f, -1.0f, -1.0f); TVB[23].c = VB[23].c = Color(1.f, 0.f, 1.f, 1.f); VB[23].n = Vector3f( 0.0f,-1.0f,  0.0f);
 }
 
 void SoftRenderer::DeleteVertexBuffer()
@@ -96,14 +132,39 @@ void SoftRenderer::DeleteVertexBuffer()
 
 void SoftRenderer::CreateIndexBuffer()
 {
-	IB = new UINT32[m_uPrimtiveNum * 3];
-	IB[0] = 0;
-	IB[1] = 2;
-	IB[2] = 1;
+    m_uPrimtiveNum = 12;
+	IB = new UINT16[m_uPrimtiveNum * 3];
+// 	IB[0] = 0;
+// 	IB[1] = 2;
+// 	IB[2] = 1;
 
 // 	IB[3] = 0;
 // 	IB[4] = 1;
 // 	IB[5] = 3;
+
+    // front side
+    IB[0] = 0; IB[1] = 1; IB[2] = 2;
+    IB[3] = 0; IB[4] = 2; IB[5] = 3;
+
+    // back side
+    IB[6] = 4; IB[7] = 6; IB[8] = 5;
+    IB[9] = 4; IB[10] = 7; IB[11] = 6;
+
+    // left side
+    IB[12] = 8; IB[13] = 9; IB[14] = 10;
+    IB[15] = 8; IB[16] = 10; IB[17] = 11;
+
+    // right side
+    IB[18] = 12; IB[19] = 13; IB[20] = 14;
+    IB[21] = 12; IB[22] = 14; IB[23] = 15;
+
+    // top
+    IB[24] = 16; IB[25] = 17; IB[26] = 18;
+    IB[27] = 16; IB[28] = 18; IB[29] = 19;
+
+    // bottom
+    IB[30] = 20; IB[31] = 21; IB[32] = 22;
+    IB[33] = 20; IB[34] = 23; IB[35] = 21;
 }
 
 void SoftRenderer::DeleteIndexBuffer()
@@ -117,7 +178,7 @@ void SoftRenderer::SetupMatrices()
 	// 	FLOAT fAngle = iTime * ( 2.0f * M_PI ) / 1000.0f;
 	//m_fYAngle = M_PI_4;
 	//m_model = RotateX(m_fXAngle);
-	m_model *= RotateY(m_fYAngle);
+	m_world *= RotateY(m_fYAngle);
 
 	// Position and aim the camera
 	Vector3f position(0.0f, 3.0f, -5.0f);
@@ -126,7 +187,7 @@ void SoftRenderer::SetupMatrices()
 	m_view = LookAt(position, target, up);
 
 	float ar = float(WINDOW_WIDTH) / float(WINDOW_HEIGHT);
-	m_proj = Perspective(M_PI_4, 1.0f, ar, 100.0f);
+	m_proj = Perspective(M_PI_4, ar, 1.0f, 100.0f);
 
 	m_port = ViewPort(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
@@ -145,6 +206,7 @@ void SoftRenderer::SetupLights()
 	l->Kd.r = 1.0f;
 	l->Kd.g = 1.0f;
 	l->Kd.b = 1.0f;
+    l->Pos = Vector3f(-2.0f, -2.0f, -2.0f);
 	l->Dir = Vector3f(0.0f, 0.0f, 1.0f);
 	l->Range = 1000.0f;
 	m_Lights.push_back(l);
@@ -156,10 +218,10 @@ void SoftRenderer::SetupLights()
 void SoftRenderer::Render()
 {
 	// Clear the backbuffer to a black color
-	Clear(CLEAR_TARGET, RGB(0, 0, 255), 0, 0);
+	Clear(CLEAR_TARGET | CLEAR_ZBUFFER, RGB(255, 255, 255), 0, 0);
 
 	// Setup the Lights and materials
-	SetupLights();
+	//SetupLights();
 
 	// Setup the world, view, and projection matrices
 	SetupMatrices();
@@ -222,7 +284,7 @@ void SoftRenderer::Render()
 			* 
 			*      p2
 			*/
-			m_pRas->RasterizeTopTri(p0, p1, p2, BCB, BZB, m_eFillMode, m_eShadeMode);
+			m_pRas->RasterizeTopTri(p0, p1, p2, BCB, m_bZEnable ? BZB : nullptr, m_eFillMode, m_eShadeMode);
 			break;
 		case BOTTOM:
 			/* case 1 平底三角形
@@ -231,7 +293,7 @@ void SoftRenderer::Render()
 			* 
 			*  p2      p1
 			*/
-			m_pRas->RasterizeBottomTri(p0, p1, p2, BCB, BZB, m_eFillMode, m_eShadeMode);
+			m_pRas->RasterizeBottomTri(p0, p1, p2, BCB, m_bZEnable ? BZB : nullptr, m_eFillMode, m_eShadeMode);
 			break;
 		case LEFT:
 			/* case 2 左三角形
@@ -242,7 +304,7 @@ void SoftRenderer::Render()
 			*
 			*  p2
 			*/
-			m_pRas->RasterizeLeftTri(p0, p1, p2, BCB, BZB, m_eFillMode, m_eShadeMode);
+			m_pRas->RasterizeLeftTri(p0, p1, p2, BCB, m_bZEnable ? BZB : nullptr, m_eFillMode, m_eShadeMode);
 			break;
 		case RIGHT:
 			/* case 3 右三角形
@@ -254,7 +316,7 @@ void SoftRenderer::Render()
 			*
 			*			p1
 			*/
-			m_pRas->RasterizeRightTri(p0, p1, p2, BCB, BZB, m_eFillMode, m_eShadeMode);
+			m_pRas->RasterizeRightTri(p0, p1, p2, BCB, m_bZEnable ? BZB : nullptr, m_eFillMode, m_eShadeMode);
 			break;
 		}
 	}
@@ -283,15 +345,16 @@ void SoftRenderer::Clear(DWORD flags, COLORREF color, float z, DWORD stencil)
 // eye space T&L
 void SoftRenderer::TL(size_t vi)
 {
-	Matrix4x4 MV =  m_model * m_view;
+	Matrix4x4 WV =  m_world * m_view;
 	// vertex transformation
-	TVB[vi].v = VB[vi].v * MV;
+	TVB[vi].v = VB[vi].v * WV;
 	// normal transform
-	TVB[vi].n = (Vector4f(VB[vi].n, 0.0f) * MV).ToVector3f(); // 偷懒法 更稳妥的办法是用逆转置
+	TVB[vi].n = (Vector4f(VB[vi].n, 0.0f) * WV).ToVector3f(); // 偷懒法 更稳妥的办法是用逆转置
 	TVB[vi].n.Normalize();
 
 	// lighting in camera space
 	Color ambient, diffuse, specular;
+    //m_bLighting = false;
 	if ( m_bLighting )
 	{
 		// Phong reflection model
@@ -302,8 +365,8 @@ void SoftRenderer::TL(size_t vi)
 		{
 			Light* L = *Lit;
 			// transform light into camera space
-			Vector4f lightPosCS = Vector4f(L->Pos, 1.0f) * MV;
-			Vector3f lightDirCS = (Vector4f(L->Dir, 0.0f) * MV).ToVector3f();
+			Vector4f lightPosCS = Vector4f(L->Pos, 1.0f) * WV;
+			Vector3f lightDirCS = (Vector4f(L->Dir, 0.0f) * WV).ToVector3f();
 			lightDirCS.Normalize();
 
 			float NdotL = DotProduct(lightDirCS, TVB[vi].n);
@@ -319,7 +382,6 @@ void SoftRenderer::TL(size_t vi)
 			// TODO: Blinn-Phong
 		}
 
-		//TVB[vi].c = ambient;
 		TVB[vi].c = ambient + diffuse;
 		//TVB[vi].c = ambient + diffuse + specular;
 		TVB[vi].c.Clamp();

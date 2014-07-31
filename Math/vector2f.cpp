@@ -165,8 +165,7 @@ Vector2f operator / (const Vector2f& lhs, float fScalar)
 /************************************************************************/
 bool operator == (const Vector2f& lhs, const Vector2f& rhs)
 {
-	return ( (lhs.x == rhs.x) &&
-		(lhs.y == rhs.y) );
+	return ( (lhs.x == rhs.x) && (lhs.y == rhs.y) );
 }
 
 bool operator != (const Vector2f& lhs, const Vector2f& rhs)
