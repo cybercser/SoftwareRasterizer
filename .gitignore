@@ -23,5 +23,6 @@
 # MS Visual Studio
 *.opensdf
 *.
-Debug
 /Debug
+/*.suo
+/*.sdf
